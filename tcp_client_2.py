@@ -15,17 +15,18 @@ def recvall(sock, count):
     return buf
 
 
-message = b'test'
+message = b'forward'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('192.168.11.3', 23233)
-print('connecting to %s port %s' % server_address)
-sock.connect(server_address)
 
 try:
+    print('connecting to %s port %s' % server_address)
+    sock.connect(server_address)
+
     count = 0
 
-    while count < 100:
+    while count < 10:
 
         t1 = time.time()
 
@@ -46,7 +47,7 @@ try:
             print('unexpected response.')
             break
 
-        time.sleep(0.2)
+        time.sleep(0.1)
         count += 1
 
 except socket.error as e:

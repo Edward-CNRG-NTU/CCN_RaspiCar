@@ -379,6 +379,10 @@ def launch_tcp_service_routine():
                         elif data == b'test':
                             connection.sendall(b'ack')
                             print('\t\t[tcp] sending ack to the client.')
+                        elif data == b'forward':
+                            forward_controlled(0.1)
+                            connection.sendall(b'ack')
+                            print('\t\t[tcp] sending ack to the client.')
                         else:
                             print('\t\tunexpected command.')
 

@@ -18,15 +18,15 @@ def recvall(sock, count):
 
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 # Connect the socket to the port where the server is listening
 server_address = ('192.168.11.3', 23232)
-print('connecting to %s port %s' % server_address)
-sock.connect(server_address)
 
 message = b'QUERY_IMAGE'
 
 try:
+    print('connecting to %s port %s' % server_address)
+    sock.connect(server_address)
 
     count = 0
 
@@ -40,19 +40,16 @@ try:
         header = None
         img_data = b''
 
-        try:
-            header = sock.recv(16)
-            header = struct.unpack('HHHHII', header)
-            data_len = header[0]
-            while data_len:
-                buf = sock.recv(data_len)
-                if not buf:
-                    break
-                else:
-                    img_data += buf
-                    data_len -= len(buf)
-        except socket.error as e:
-            print(e)
+        header = sock.recv(16)
+        header = struct.unpack('HHHHII', header)
+        data_len = header[0]
+        while data_len:
+            buf = sock.recv(data_len)
+            if not buf:
+                break
+            else:
+                img_data += buf
+                data_len -= len(buf)
 
         print(1/(time.time()-t1))
 
@@ -71,6 +68,9 @@ try:
 
         else:
             time.sleep(0.2)
+
+except socket.error as e:
+    print(e)
 
 finally:
     print('closing socket')

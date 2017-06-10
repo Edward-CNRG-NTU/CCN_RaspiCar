@@ -14,13 +14,14 @@ HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 count = 0
 last_time_stamp = 0
 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    print('listening to port %s' % 23232)
-    sock.bind(('', 23232))
+    server_address = ('', 23232)
+    print('binding to %s port %s' % server_address)
+    sock.bind(server_address)
 
     sock.sendto(b'HELLO', ('192.168.11.3', 23232))
 
@@ -31,10 +32,7 @@ try:
         packet = None
         addr = None
 
-        try:
-            (packet, addr) = sock.recvfrom(32 * 1024)
-        except socket.error as e:
-            print(e)
+        (packet, addr) = sock.recvfrom(32 * 1024)
 
         if packet and addr == TARGET_IP:
             # count += 1
@@ -58,7 +56,10 @@ try:
                 print('skipping lagged packet.')
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            count = 100
+            break
+
+except socket.error as e:
+    print(e)
 
 finally:
     print('closing socket')
