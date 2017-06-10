@@ -57,6 +57,7 @@ def launch_udp_listener_routine():
                             g_distance = np.clip(header[2:5], 0, 20)
                             np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
                             decoded_img = cv2.imdecode(np_data, 1)
+                            # print(decoded_img.shape)
                             # cv2.imshow('view', decoded_img)
                             # cv2.waitKey(1)
                         else:

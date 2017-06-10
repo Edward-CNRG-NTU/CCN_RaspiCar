@@ -307,7 +307,7 @@ try:
             print('\tlistening for new connection...')
             connection, client_address = sock.accept()
             print('\tnew connection from %s %d' % client_address)
-            while True:
+            while not g_quit:
                 print('\t\twaiting for command...')
                 data = connection.recv(1024)
                 print('\t\treceived "%s"' % data)
