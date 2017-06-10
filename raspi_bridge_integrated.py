@@ -433,5 +433,3 @@ finally:
     cv2.destroyAllWindows()
     time.sleep(1.0)
     print('exit main.')
-
-
