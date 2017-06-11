@@ -127,6 +127,7 @@ def launch_external_sensor_routine():
                 g_external_sensor_condition.release()
 
             if g_proximity_control != proximity_control:
+                print('send g_proximity_control')
                 serial_port.write(chr(g_proximity_control))
                 proximity_control = g_proximity_control
 
@@ -147,7 +148,7 @@ def launch_obstacle_detection_routine():
         global g_proximity_control
         next_entry_t = 0
         while not stopper.wait(timeout=(next_entry_t - time.time())):
-            next_entry_t = time.time() + 0.1
+            next_entry_t = time.time() + 0.3
             global g_obstacle_detected
             if np.any(filtered_proximity(3) < [5, 25, 5]):
                 g_obstacle_detected = True
@@ -370,20 +371,67 @@ def launch_tcp_service_routine():
 
                     while not stopper.is_set():
                         print('\t\t[tcp] waiting for command...')
-                        data = connection.recv(128)
+                        data = str(connection.recv(128))
                         print('\t\t[tcp] received "%s".' % data)
 
                         if len(data) == 0:
                             print('\t[tcp] connection closed.')
                             break
-                        elif data == b'test':
+                        elif data.startswith('test'):
                             connection.sendall(b'ack')
                             print('\t\t[tcp] sending ack to the client.')
-                        elif data == b'forward':
-                            forward_controlled(0.1)
+                        elif data.startswith('fwd'):
+                            try:
+                                value = float(data.split(':')[1])
+                            except KeyError:
+                                value = 0.1
+                            except ValueError:
+                                value = 0
+                            forward_controlled(value)
+                            connection.sendall(b'ack')
+                            print('\t\t[tcp] sending ack to the client.')
+                        elif data.startswith('right'):
+                            try:
+                                value = float(data.split(':')[1])
+                            except KeyError:
+                                value = 10
+                            except ValueError:
+                                value = 0
+                            turn_right_controlled(value)
+                            connection.sendall(b'ack')
+                            print('\t\t[tcp] sending ack to the client.')
+                        elif data.startswith('left'):
+                            try:
+                                value = float(data.split(':')[1])
+                            except KeyError:
+                                value = 10
+                            except ValueError:
+                                value = 0
+                            turn_left_controlled(value)
+                            connection.sendall(b'ack')
+                            print('\t\t[tcp] sending ack to the client.')
+                        elif data.startswith('obstacle'):
+                            global obstacle_detection_routine_stopper
+                            try:
+                                value = float(data.split(':')[1])
+                            except KeyError:
+                                if obstacle_detection_routine_stopper is None:
+                                    value = 1
+                                else:
+                                    value = 0
+                            except ValueError:
+                                value = 0
+
+                            if value > 0.0 and obstacle_detection_routine_stopper is None:
+                                obstacle_detection_routine_stopper = launch_obstacle_detection_routine()
+                            elif value == 0.0 and obstacle_detection_routine_stopper is not None:
+                                obstacle_detection_routine_stopper.set()
+                                obstacle_detection_routine_stopper = None
+
                             connection.sendall(b'ack')
                             print('\t\t[tcp] sending ack to the client.')
                         else:
+                            connection.sendall(b'error')
                             print('\t\tunexpected command.')
 
                 except socket.timeout:
