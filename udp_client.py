@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 
-TARGET_IP = ('192.168.11.3', 23232)
+TARGET_IP = ('192.168.11.5', 23232)
 
 HEADER_FORMAT = 'QHHHHII'
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
@@ -23,7 +23,7 @@ try:
     print('binding to %s port %s' % server_address)
     sock.bind(server_address)
 
-    sock.sendto(b'HELLO', ('192.168.11.3', 23232))
+    sock.sendto(b'HELLO', TARGET_IP)
 
     while count < 100:
 
