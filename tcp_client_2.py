@@ -15,7 +15,7 @@ def recvall(sock, count):
     return buf
 
 
-message = b'forward'
+message = b'right:90'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('192.168.11.3', 23233)
@@ -26,7 +26,7 @@ try:
 
     count = 0
 
-    while count < 10:
+    while count < 4:
 
         t1 = time.time()
 
@@ -43,6 +43,9 @@ try:
             break
         elif data == b'ack':
             pass
+        elif data == b'error':
+            print('error response.')
+            break
         else:
             print('unexpected response.')
             break
