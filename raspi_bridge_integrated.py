@@ -312,9 +312,7 @@ def launch_udp_service_routine():
             sock.bind(server_address)
 
             global g_frame
-            next_entry_t = 0
-            while not stopper.wait(timeout=(next_entry_t - time.time())):
-                next_entry_t = time.time() + 0.02
+            while not stopper.is_set():
 
                 if target_ip is None:
                     try:
@@ -332,6 +330,8 @@ def launch_udp_service_routine():
                                          g_proximity[2], g_wheel_count[0], g_wheel_count[1])
                     sock.sendto((header + frame), target_ip)
                     print('\t\t[udp] sending data%06d(%d bytes) to %s. ' % (time_stamp, len(frame), target_ip[0]))
+                else:
+                    time.sleep(0.01)
 
         except socket.error as e:
             print(e)

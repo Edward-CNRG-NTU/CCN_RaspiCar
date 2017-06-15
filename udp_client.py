@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 
-TARGET_IP = ('192.168.11.5', 23232)
+TARGET_IP = ('192.168.11.3', 23232)
 
 HEADER_FORMAT = 'QHHHHII'
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
@@ -19,9 +19,9 @@ sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
-    server_address = ('', 23232)
-    print('binding to %s port %s' % server_address)
-    sock.bind(server_address)
+    listen_address = ('', 23232)
+    print('binding to %s port %s' % listen_address)
+    sock.bind(listen_address)
 
     sock.sendto(b'HELLO', TARGET_IP)
 
@@ -44,6 +44,7 @@ try:
                 if header[1] == len(packet) - HEADER_SIZE:
                     np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
                     decoded_img = cv2.imdecode(np_data, 1)
+                    print(decoded_img.shape)
                     OSD = '%d,%3d,%3d,%3d,%5d,%5d' % header[1:]
                     cv2.putText(decoded_img, OSD, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 1)
                     cv2.putText(decoded_img, '%3.3f ms' % (time.time()-t1), (200, 220), cv2.FONT_HERSHEY_SIMPLEX,

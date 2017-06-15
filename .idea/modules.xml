@@ -3,8 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/CCN_RaspiCar.iml" filepath="$PROJECT_DIR$/.idea/CCN_RaspiCar.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/CCN_RaspiCar.iml" filepath="$PROJECT_DIR$/.idea/CCN_RaspiCar.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/CCN_final.iml" filepath="$PROJECT_DIR$/.idea/CCN_final.iml" />
     </modules>
   </component>
 </project>
