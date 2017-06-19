@@ -4,6 +4,7 @@ import time
 import sys
 import cv2
 import numpy as np
+import operator
 
 
 TARGET_IP = ('192.168.11.3', 23232)
@@ -38,39 +39,18 @@ def find_light(g_frame):
         (_, contours_red, _) = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         (_, contours_green, _) = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        contours_red = [i for i in contours_red if 10 < cv2.contourArea(i)]
-        contours_green = [i for i in contours_green if 10 < cv2.contourArea(i)]
+        contours_dict_red = [{'contour': i, 'area': cv2.contourArea(i), 'color': 'RED'} for i in contours_red]
+        contours_dict_green = [{'contour': i, 'area': cv2.contourArea(i), 'color': 'GREEN'} for i in contours_green]
 
-        contours_area_red = [cv2.contourArea(i) for i in contours_red]
-        contours_area_green = [cv2.contourArea(i) for i in contours_green]
+        contours_dict = contours_dict_red + contours_dict_green
 
-        c_final = None
+        if len(contours_dict):
+            c_final = max(contours_dict, key=operator.itemgetter('area'))
 
-        if len(contours_red) and not len(contours_green):
-            c_final = max(contours_red, key=cv2.contourArea)
-            light = 'RED'
-
-        elif not len(contours_red) and len(contours_green):
-            c_final = max(contours_green, key=cv2.contourArea)
-            light = 'GREEN'
-
-        elif len(contours_red) and len(contours_green):
-            c_red = max(contours_red, key=cv2.contourArea)
-            c_green = max(contours_green, key=cv2.contourArea)
-
-            if cv2.contourArea(c_red) > cv2.contourArea(c_green):
-                c_final = c_red
-                light = 'RED'
-            else:
-                c_final = c_green
-                light = 'GREEN'
-
-                # contours = contours_red + contours_green
-                # c_final = max(contours, key=cv2.contourArea)
-                # c_final_idx = contours.index(c_final)
-        if c_final is not None:
-            x, y, w, h = cv2.boundingRect(c_final)
-            cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (0, 255, 255), 2)
+            if c_final['area'] > 10:
+                x, y, w, h = cv2.boundingRect(c_final['contour'])
+                cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (0, 255, 255), 2)
+                light = c_final['color']
 
     return x, y, w, h, light, frame
 
