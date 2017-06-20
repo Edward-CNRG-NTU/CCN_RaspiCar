@@ -39,10 +39,8 @@ def find_light(g_frame):
         (_, contours_red, _) = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         (_, contours_green, _) = cv2.findContours(mask_green, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        contours_dict_red = [{'contour': i, 'area': cv2.contourArea(i), 'color': 'RED'} for i in contours_red]
-        contours_dict_green = [{'contour': i, 'area': cv2.contourArea(i), 'color': 'GREEN'} for i in contours_green]
-
-        contours_dict = contours_dict_red + contours_dict_green
+        contours_dict = [{'contour': i, 'area': cv2.contourArea(i), 'color': 'RED'} for i in contours_red]
+        contours_dict += [{'contour': i, 'area': cv2.contourArea(i), 'color': 'GREEN'} for i in contours_green]
 
         if len(contours_dict):
             c_final = max(contours_dict, key=operator.itemgetter('area'))
@@ -53,6 +51,7 @@ def find_light(g_frame):
                 light = c_final['color']
 
     return x, y, w, h, light, frame
+
 
 try:
     listen_address = ('', 23232)
