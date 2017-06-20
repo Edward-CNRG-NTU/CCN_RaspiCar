@@ -4,17 +4,6 @@ import time
 import sys
 import numpy as np
 
-
-def recvall(sock, count):
-    buf = b''
-    while count:
-        newbuf = sock.recv(count)
-        if not newbuf: return None
-        buf += newbuf
-        count -= len(newbuf)
-    return buf
-
-
 message = b'fwd:0.03'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

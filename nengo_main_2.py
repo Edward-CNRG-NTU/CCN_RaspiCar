@@ -9,10 +9,11 @@ import operator
 
 import nengo.spa as spa
 
-TARGET_IP = ('192.168.11.3', 23232)
+TARGET_IP = '192.168.11.3'
 
 g_vision_msg = 0
 g_visual_perception = ''
+g_motion_out = ''
 g_distance = np.zeros([3])
 
 
@@ -54,9 +55,9 @@ def visual_perception(g_frame):
                 else:
                     distance = '+NEAR'
 
-                if x < L:
+                if (x+w/2) < L:
                     light_position = '+LEFT'
-                elif x > R:
+                elif (x+w/2) > R:
                     light_position = '+RIGHT'
 
     perception = light + light_position + distance
@@ -74,14 +75,15 @@ def launch_udp_listener_routine():
 
         last_time_stamp = 0
 
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             print('listening to port %s' % 23232)
             sock.bind(('', 23232))
 
-            sock.sendto(b'HELLO', ('192.168.11.3', 23232))
+            sock.sendto(b'HELLO', (TARGET_IP, 23232))
 
             while not stopper.is_set():
 
@@ -93,14 +95,14 @@ def launch_udp_listener_routine():
                 except socket.error as e:
                     print(e)
 
-                if packet and addr == TARGET_IP:
+                if packet and addr == (TARGET_IP, 23232):
                     header = struct.unpack(HEADER_FORMAT, packet[:HEADER_SIZE])
 
                     if header[0] > last_time_stamp:
                         last_time_stamp = header[0]
 
                         if header[1] == len(packet) - HEADER_SIZE:
-                            print(header)
+                            # print(header)
                             global g_distance
                             g_distance = np.clip(header[2:5], 0, 20)
                             np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
@@ -110,8 +112,8 @@ def launch_udp_listener_routine():
                             global g_visual_perception
                             g_visual_perception = perception
 
-                            cv2.imshow('view', frame)
-                            cv2.waitKey(1)
+                            # cv2.imshow('view', frame)
+                            # cv2.waitKey(1)
                         else:
                             print('packet size mismach.')
 
@@ -131,10 +133,79 @@ def launch_udp_listener_routine():
     return stopper
 
 
+def launch_tcp_client_routine():
+    stopper = threading.Event()
+
+    def tcp_client_routine():
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            print('connecting to %s port %s' % (TARGET_IP, 23233))
+            sock.connect((TARGET_IP, 23233))
+
+            while not stopper.is_set():
+                
+                motion_out = g_motion_out
+                
+                command = ''
+                
+                if motion_out == 'FORWARD':
+                    command = 'fwd:0.03'
+                elif motion_out == 'RIGHT':
+                    command = 'right:5'
+                elif motion_out == 'LEFT':
+                    command = 'left:5'
+                elif motion_out == 'STOP':
+                    command = ''
+                else:
+                    pass
+                
+                if len(command):
+                    t1 = time.time()
+
+                    print(command,)
+    
+                    sock.sendall(command.encode('utf-8'))
+                    data = sock.recv(128).decode('utf-8')
+                    print(data,)
+    
+                    print('RTT= %f s' % (time.time() - t1))
+    
+                    if len(data) == 0:
+                        print('connection closed.')
+                        break
+                    elif data.startswith('ack'):
+                        pass
+                    elif data.startswith('error'):
+                        print('error response.')
+                        break
+                    else:
+                        print('unexpected response.')
+                        break
+                    
+                    time.sleep(0.3)
+                else:
+                    time.sleep(0.3)
+
+        finally:
+            print('closing socket')
+            sock.close()
+
+        print('tcp_client_routine stopped!')
+
+    t = threading.Thread(target=tcp_client_routine)
+    t.setDaemon(True)
+    t.start()
+
+    return stopper
+
+
+tcp_client_routine_stopper = launch_tcp_client_routine()
 udp_listener_routine_stopper = launch_udp_listener_routine()
 
 model = spa.SPA()
-D = 32
+D = 48
 
 with model:
     model.vision = spa.State(D)
@@ -142,45 +213,42 @@ with model:
     model.motion = spa.State(D)
 
     actions = spa.Actions(
-        'dot(vision, RED)*0.8 --> motion=STOP',
-        'dot(vision, GREEN)*0.8 --> motion=FORWARD',
-        'dot(vision, LEFT) --> motion=LEFT',
         'dot(vision, RIGHT) --> motion=RIGHT',
-        'dot(vision, NEAR) --> motion=NEAR',
-        'dot(vision, FAR) --> motion=FAR',
-        '0.5 --> motion=0'
+        'dot(vision, LEFT) --> motion=LEFT',
+        'dot(vision, NEAR)*0.6 --> motion=STOP',
+        'dot(vision, FAR)*0.6 --> motion=FORWARD',
+        'dot(vision, GREEN)*0.8 --> motion=FORWARD',
+        'dot(vision, RED)*0.4 --> motion=STOP',
+        '0.3 --> motion=0',
     )
 
     model.bg = spa.BasalGanglia(actions)
     model.thalamus = spa.Thalamus(model.bg)
 
 
-    def input_object(t):  # get vision
+    def input_func(t):  # get vision
         if g_visual_perception:
             return g_visual_perception
         else:
             return '0'
 
 
-    model.input = spa.Input(vision=input_object)
+    model.input = spa.Input(vision=input_func)
     out_vocab = model.motion.outputs['default'][1]  # get vocab
 
     print(model.motion.outputs['default'][1])
 
-
-    # print(out_vocab.__dict__['vectors'])
-
-    def myOutput(t, x):
+    def output_func(t, x):
         similarity = spa.similarity(x, out_vocab.vectors)
         # print(out_vocab.keys[np.argmax(similarity)])
 
         if np.any(similarity > 0.7):
             global g_motion_out
             g_motion_out = out_vocab.keys[np.argmax(similarity)]
-            print(g_motion_out)
+            # print(g_motion_out)
 
 
-    model.output = nengo.Node(size_in=D, size_out=0, output=myOutput)  # get output motion
+    model.output = nengo.Node(size_in=D, size_out=0, output=output_func)  # get output motion
 
     nengo.Connection(model.motion.output, model.output)
 
