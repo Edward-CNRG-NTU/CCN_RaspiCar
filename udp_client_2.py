@@ -23,9 +23,9 @@ sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 def find_light(g_frame):
     x = y = w = h = frame = light = None
     HSV_YELLOW = {'lower': (22, 90, 80), 'upper': (33, 255, 255)}
-    HSV_RED = {'lower': (0, 60, 80), 'upper': (15, 255, 255)}
-    HSV_RED2 = {'lower': (170, 60, 80), 'upper': (179, 255, 255)}
-    HSV_GREEN = {'lower': (45, 30, 170), 'upper': (80, 255, 255)}
+    HSV_RED = {'lower': (0, 80, 170), 'upper': (15, 255, 255)}
+    HSV_RED2 = {'lower': (170, 80, 170), 'upper': (179, 255, 255)}
+    HSV_GREEN = {'lower': (45, 80, 170), 'upper': (80, 255, 255)}
 
     if g_frame is not None:
         frame = cv2.GaussianBlur(g_frame, (3, 3), 0)
