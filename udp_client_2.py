@@ -29,7 +29,7 @@ def find_light(g_frame):
 
     if g_frame is not None:
         frame = cv2.GaussianBlur(g_frame, (3, 3), 0)
-        frameU = frame[:120, :]
+        frameU = frame[:200, :]
         # frame = g_frame.copy()
         hsv_frame = cv2.cvtColor(frameU, cv2.COLOR_BGR2HSV)
         mask_red = cv2.inRange(hsv_frame, HSV_RED['lower'], HSV_RED['upper']) + cv2.inRange(hsv_frame,

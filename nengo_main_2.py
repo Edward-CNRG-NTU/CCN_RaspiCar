@@ -12,7 +12,7 @@ import nengo.spa as spa
 TARGET_IP = ('192.168.11.3', 23232)
 
 g_vision_msg = 0
-g_motion_out = 'FORWARD'
+g_visual_perception = ''
 g_distance = np.zeros([3])
 
 
@@ -28,7 +28,7 @@ def visual_perception(g_frame):
 
     if g_frame is not None:
         frame = cv2.GaussianBlur(g_frame, (3, 3), 0)
-        frameU = frame[:120, :]
+        frameU = frame[:200, :]
         # frame = g_frame.copy()
         hsv_frame = cv2.cvtColor(frameU, cv2.COLOR_BGR2HSV)
         mask_red = cv2.inRange(hsv_frame, HSV_RED['lower'], HSV_RED['upper']) + cv2.inRange(hsv_frame,
@@ -105,13 +105,10 @@ def launch_udp_listener_routine():
                             g_distance = np.clip(header[2:5], 0, 20)
                             np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
                             decoded_img = cv2.imdecode(np_data, 1)
-                            (x, y, w, h, light, frame) = find_light(decoded_img)
+                            (x, y, w, h, perception, frame) = visual_perception(decoded_img)
 
-                            if light and (x + w / 2) < 200:
-                                light = light + ' + LEFT'
-
-                            global g_vision_msg
-                            g_vision_msg = light
+                            global g_visual_perception
+                            g_visual_perception = perception
 
                             cv2.imshow('view', frame)
                             cv2.waitKey(1)
@@ -137,7 +134,7 @@ def launch_udp_listener_routine():
 udp_listener_routine_stopper = launch_udp_listener_routine()
 
 model = spa.SPA()
-D = 16
+D = 32
 
 with model:
     model.vision = spa.State(D)
@@ -148,6 +145,9 @@ with model:
         'dot(vision, RED)*0.8 --> motion=STOP',
         'dot(vision, GREEN)*0.8 --> motion=FORWARD',
         'dot(vision, LEFT) --> motion=LEFT',
+        'dot(vision, RIGHT) --> motion=RIGHT',
+        'dot(vision, NEAR) --> motion=NEAR',
+        'dot(vision, FAR) --> motion=FAR',
         '0.5 --> motion=0'
     )
 
@@ -156,9 +156,8 @@ with model:
 
 
     def input_object(t):  # get vision
-        print(g_vision_msg)
-        if g_vision_msg:
-            return g_vision_msg
+        if g_visual_perception:
+            return g_visual_perception
         else:
             return '0'
 
