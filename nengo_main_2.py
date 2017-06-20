@@ -16,8 +16,11 @@ g_motion_out = 'FORWARD'
 g_distance = np.zeros([3])
 
 
-def find_light(g_frame):
-    x = y = w = h = frame = light = None
+def visual_perception(g_frame):
+    x = y = w = h = frame = None
+    light = light_position = distance = ''
+    L = 160
+    R = 250
     HSV_YELLOW = {'lower': (22, 90, 80), 'upper': (33, 255, 255)}
     HSV_RED = {'lower': (0, 80, 170), 'upper': (15, 255, 255)}
     HSV_RED2 = {'lower': (170, 80, 170), 'upper': (179, 255, 255)}
@@ -46,7 +49,19 @@ def find_light(g_frame):
                 cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (0, 255, 255), 2)
                 light = c_final['color']
 
-    return x, y, w, h, light, frame
+                if 7*320/h > 30:
+                    distance = '+FAR'
+                else:
+                    distance = '+NEAR'
+
+                if x < L:
+                    light_position = '+LEFT'
+                elif x > R:
+                    light_position = '+RIGHT'
+
+    perception = light + light_position + distance
+
+    return x, y, w, h, perception, frame
 
 
 def launch_udp_listener_routine():
