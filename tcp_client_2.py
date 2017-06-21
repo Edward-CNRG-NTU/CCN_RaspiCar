@@ -4,7 +4,7 @@ import time
 import sys
 import numpy as np
 
-message = b'fwd:0.03'
+command = 'fwd:0.03'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = ('192.168.11.3', 23233)
@@ -15,17 +15,16 @@ try:
 
     count = 0
 
-    while count < 10:
+    while count < 1:
 
         t1 = time.time()
 
-        # Send data
-        sock.sendall(message)
+        print('"%s": ' % command, end='')
 
+        sock.sendall(command.encode('utf-8'))
         data = sock.recv(128).decode('utf-8')
-        print(data)
 
-        print('RTT= %f s' % (time.time() - t1))
+        print('"%s", RTT= %f s' % (data, (time.time() - t1)))
 
         if len(data) == 0:
             print('connection closed.')

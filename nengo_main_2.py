@@ -15,17 +15,18 @@ g_vision_msg = 0
 g_visual_perception = ''
 g_motion_out = ''
 g_distance = np.zeros([3])
+g_simulator_alive = 0.0
 
 
 def visual_perception(g_frame):
     x = y = w = h = frame = None
     light = light_position = distance = ''
-    L = 160
+    L = 200
     R = 250
     HSV_YELLOW = {'lower': (22, 90, 80), 'upper': (33, 255, 255)}
     HSV_RED = {'lower': (0, 80, 170), 'upper': (15, 255, 255)}
     HSV_RED2 = {'lower': (170, 80, 170), 'upper': (179, 255, 255)}
-    HSV_GREEN = {'lower': (45, 80, 170), 'upper': (80, 255, 255)}
+    HSV_GREEN = {'lower': (45, 100, 200), 'upper': (80, 255, 255)}
 
     if g_frame is not None:
         frame = cv2.GaussianBlur(g_frame, (3, 3), 0)
@@ -45,20 +46,21 @@ def visual_perception(g_frame):
         if len(contours_dict):
             c_final = max(contours_dict, key=operator.itemgetter('area'))
 
-            if c_final['area'] > 10:
+            if c_final['area'] > 50:
                 x, y, w, h = cv2.boundingRect(c_final['contour'])
                 cv2.rectangle(frame, (int(x), int(y)), (int(x + w), int(y + h)), (0, 255, 255), 2)
                 light = c_final['color']
 
-                if 7*320/h > 30:
+                if 7*320/h > 30 and y > 3:
                     distance = '+FAR'
+                    if (x + w / 2) < L:
+                        light_position = '+LEFT'
+                    elif (x + w / 2) > R:
+                        light_position = '+RIGHT'
                 else:
                     distance = '+NEAR'
 
-                if (x+w/2) < L:
-                    light_position = '+LEFT'
-                elif (x+w/2) > R:
-                    light_position = '+RIGHT'
+
 
     perception = light + light_position + distance
 
@@ -112,8 +114,8 @@ def launch_udp_listener_routine():
                             # global g_visual_perception
                             # g_visual_perception = perception
 
-                            # cv2.imshow('view', frame)
-                            # cv2.waitKey(1)
+                            cv2.imshow('view', frame)
+                            cv2.waitKey(1)
                         else:
                             print('packet size mismach.')
 
@@ -145,48 +147,49 @@ def launch_tcp_client_routine():
             sock.connect((TARGET_IP, 23233))
 
             while not stopper.is_set():
-                
-                motion_out = g_motion_out
-                
-                command = ''
-                
-                if motion_out == 'FORWARD':
-                    command = 'fwd:0.03'
-                elif motion_out == 'RIGHT':
-                    command = 'right:5'
-                elif motion_out == 'LEFT':
-                    command = 'left:5'
-                elif motion_out == 'STOP':
-                    command = ''
-                else:
-                    pass
-                
-                if len(command):
-                    t1 = time.time()
 
-                    print(command,)
-    
-                    sock.sendall(command.encode('utf-8'))
-                    data = sock.recv(128).decode('utf-8')
-                    print(data,)
-    
-                    print('RTT= %f s' % (time.time() - t1))
-    
-                    if len(data) == 0:
-                        print('connection closed.')
-                        break
-                    elif data.startswith('ack'):
-                        pass
-                    elif data.startswith('error'):
-                        print('error response.')
-                        break
+                if time.time() - g_simulator_alive < 3.0:
+                    motion_out = g_motion_out
+                
+                    if motion_out == 'FORWARD':
+                        command = 'fwd:0.03'
+                    elif motion_out == 'RIGHT':
+                        command = 'right:4'
+                    elif motion_out == 'LEFT':
+                        command = 'left:4'
+                    elif motion_out == 'STOP':
+                        command = ''
                     else:
-                        print('unexpected response.')
-                        break
-                    
-                    time.sleep(0.3)
+                        command = ''
+                
+                    if command:
+                        t1 = time.time()
+
+                        print('"%s": ' % command, end='')
+
+                        sock.sendall(command.encode('utf-8'))
+                        data = sock.recv(128).decode('utf-8')
+
+                        print('"%s", RTT= %f s' % (data, (time.time() - t1)))
+
+                        if len(data) == 0:
+                            print('connection closed.')
+                            break
+                        elif data.startswith('ack'):
+                            pass
+                        elif data.startswith('error'):
+                            print('error response.')
+                            break
+                        else:
+                            print('unexpected response.')
+                            break
+
+                        # time.sleep(0.3)
+                    else:
+                        time.sleep(0.5)
                 else:
-                    time.sleep(0.3)
+                    print('simulator paused.')
+                    time.sleep(0.5)
 
         finally:
             print('closing socket')
@@ -219,7 +222,7 @@ with model:
         'dot(vision, FAR)*0.6 --> motion=FORWARD',
         'dot(vision, GREEN)*0.8 --> motion=FORWARD',
         'dot(vision, RED)*0.4 --> motion=STOP',
-        '0.3 --> motion=0',
+        '0.35 --> motion=FORWARD'
     )
 
     model.bg = spa.BasalGanglia(actions)
@@ -236,16 +239,14 @@ with model:
     model.input = spa.Input(vision=input_func)
     out_vocab = model.motion.outputs['default'][1]  # get vocab
 
-    print(model.motion.outputs['default'][1])
-
     def output_func(t, x):
         similarity = spa.similarity(x, out_vocab.vectors)
-        # print(out_vocab.keys[np.argmax(similarity)])
 
         if np.any(similarity > 0.7):
             global g_motion_out
             g_motion_out = out_vocab.keys[np.argmax(similarity)]
-            # print(g_motion_out)
+            global g_simulator_alive
+            g_simulator_alive = time.time()
 
 
     model.output = nengo.Node(size_in=D, size_out=0, output=output_func)  # get output motion
