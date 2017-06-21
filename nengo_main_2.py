@@ -106,11 +106,11 @@ def launch_udp_listener_routine():
                             global g_distance
                             g_distance = np.clip(header[2:5], 0, 20)
                             np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
-                            decoded_img = cv2.imdecode(np_data, 1)
-                            (x, y, w, h, perception, frame) = visual_perception(decoded_img)
+                            # decoded_img = cv2.imdecode(np_data, 1)
+                            # (x, y, w, h, perception, frame) = visual_perception(decoded_img)
 
-                            global g_visual_perception
-                            g_visual_perception = perception
+                            # global g_visual_perception
+                            # g_visual_perception = perception
 
                             # cv2.imshow('view', frame)
                             # cv2.waitKey(1)
