@@ -7,7 +7,7 @@ import numpy as np
 import operator
 
 
-TARGET_IP = ('192.168.11.3', 23232)
+TARGET_IP = ('192.168.11.6', 23232)
 
 HEADER_FORMAT = 'qHHHHII'
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)

@@ -7,7 +7,7 @@ import numpy as np
 command = 'fwd:0.03'
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_address = ('192.168.11.3', 23233)
+server_address = ('192.168.11.6', 23233)
 
 try:
     print('connecting to %s port %s' % server_address)

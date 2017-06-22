@@ -9,7 +9,7 @@ import operator
 
 import nengo.spa as spa
 
-TARGET_IP = '192.168.11.3'
+TARGET_IP = '192.168.11.6'
 
 g_vision_msg = 0
 g_visual_perception = ''
@@ -60,8 +60,6 @@ def visual_perception(g_frame):
                 else:
                     distance = '+NEAR'
 
-
-
     perception = light + light_position + distance
 
     return x, y, w, h, perception, frame
@@ -108,11 +106,11 @@ def launch_udp_listener_routine():
                             global g_distance
                             g_distance = np.clip(header[2:5], 0, 20)
                             np_data = np.fromstring(packet[HEADER_SIZE:], dtype='uint8')
-                            # decoded_img = cv2.imdecode(np_data, 1)
-                            # (x, y, w, h, perception, frame) = visual_perception(decoded_img)
+                            decoded_img = cv2.imdecode(np_data, 1)
+                            (x, y, w, h, perception, frame) = visual_perception(decoded_img)
 
-                            # global g_visual_perception
-                            # g_visual_perception = perception
+                            global g_visual_perception
+                            g_visual_perception = perception
 
                             cv2.imshow('view', frame)
                             cv2.waitKey(1)
@@ -242,11 +240,15 @@ with model:
     def output_func(t, x):
         similarity = spa.similarity(x, out_vocab.vectors)
 
-        if np.any(similarity > 0.7):
+        if np.any(similarity > 0.5):
             global g_motion_out
             g_motion_out = out_vocab.keys[np.argmax(similarity)]
-            global g_simulator_alive
-            g_simulator_alive = time.time()
+        else:
+            global g_motion_out
+            g_motion_out = ''
+
+        global g_simulator_alive
+        g_simulator_alive = time.time()
 
 
     model.output = nengo.Node(size_in=D, size_out=0, output=output_func)  # get output motion
